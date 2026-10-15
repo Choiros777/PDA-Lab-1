@@ -8,14 +8,15 @@ from selenium.webdriver.common.by import By
 import time
 
 driver = webdriver.Chrome()
-BASE_URL="https://spb.hh.ru/search/vacancy?area=113"
-driver.get(BASE_URL)
+
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
-
+BASE_URL = "https://spb.hh.ru/search/vacancy?area=113"
 
 while True:
+
+    driver.get(BASE_URL)
     headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -83,34 +84,13 @@ while True:
         #собираем следующие страницы
         #ищем pager внизу страницы
         pager = soup.find("nav", attrs={"data-qa": "pager-block"})
-
-        """
-        page_links = pager.find_all("a", attrs={"data-qa": "pager-page"})
-        for a in page_links:
-            num = a.get_text(strip=True)
-            href = urljoin(BASE_URL, a["href"])
-            current = a.get("aria-current") == "true"
-            print(f"Стр. {num}{' (текущая)' if current else ''}: {href}")
-        """
-        # Ссылка "вперёд" (стрелочка →)
-        #next_link = pager.find("a", attrs={"data-qa": "pager-next"})
-        #if next_link:
-            #print("Следующая:", urljoin(BASE_URL, next_link["href"]))
-        """
-        # 4. Последняя страница (после "...")
-        ellipsis = pager.find("li", attrs={"data-qa": "number-pages-ellipsis"})
-        if ellipsis:
-            last = ellipsis.find_next("a", attrs={"data-qa": "pager-page"})
-            if last:
-                print("Последняя страница:", last.get_text(strip=True),
-                      "->", urljoin(BASE_URL, last["href"]))
-                      """
-        #pager-page
-        #next_button = driver.find_element(By.CSS_SELECTOR, "button.next-page")
-        #next_button.click()
         next_link = driver.find_element(
             By.CSS_SELECTOR, 'a[data-qa="pager-next"]'
         )
+        next_link = pager.find("a", attrs={"data-qa": "pager-next"})
+        if next_link:
+            print("Следующая:", urljoin(BASE_URL, next_link["href"]))
+            BASE_URL = urljoin(BASE_URL, next_link["href"])
         print("****************************************************************************")
         time.sleep(2)  # Wait for the next page to load
     except Exception:
