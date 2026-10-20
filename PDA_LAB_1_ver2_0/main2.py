@@ -9,13 +9,30 @@ import random
 import json
 
 
+def clean_vacancy(row):
+    for i in range(len(row)):
+        if row[i] is not None:
+            # print(row[i],type(row[i]))
+            if type(row[i]) != type("f"):
+                row[i] = row[i].text
+            if not i == 10:
+                row[i] = re.sub(r'^.*?:', ' ', row[i])
+                row[i] = re.sub(r'\s+', ' ', row[i]).strip()
+        else:
+            row[i] = "None"
+    row_names = ["name", "employer", "address", "experience", "workinghours", "workingdays", "employmenttype", "workformat", "payfrequency", "salary", "infourl"]
+    clean_row = {r_n:c_r for r_n, c_r in zip(row_names,row)}
+    return clean_row
+
+
 def parse_vacancies():
     driver = webdriver.Chrome()
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
+
     page_url = "https://spb.hh.ru/search/vacancy?area=113"
-    vacancies_data = []
+    vacancies_data = [] #список, куда мы будем сохранять инфу по вакансиям
     session = requests.Session()
     session.headers.update(headers)
 
@@ -29,18 +46,19 @@ def parse_vacancies():
             driver.get(page_url )
             time.sleep(random.uniform(3, 5))
 
-            soup = BeautifulSoup(driver.page_source, "html.parser")
+            soup = BeautifulSoup(driver.page_source, "html.parser") #создаем парсер
 
-            zero = soup.find("ol", class_=re.compile("vacancies-list"))
+            zero = soup.find("ol", class_=re.compile("vacancies-list")) #берем со страницы список вакансий
             if zero is None:
                 print(f"На странице {current_page} вакансии не найдены")
                 break
 
-            vacancylist = zero.find_all("li")
+            vacancy_list = zero.find_all("li")
             page_count = 0
 
-            for vacancy in vacancylist:
+            for vacancy in vacancy_list:
                 try:
+                    #ссылка на вакансии
                     infourl_tag = vacancy.find("a", attrs={"data-qa": "serp-item__title"}, href=True)
                     if not infourl_tag: continue
                     infourl = infourl_tag.get('href')
@@ -50,9 +68,9 @@ def parse_vacancies():
                     response.raise_for_status()
 
                     vacancylink = BeautifulSoup(response.text, "html.parser")
-                    name_tag = vacancy.find("span", attrs={"data-qa": "serp-item__title-text"})
-                    employer_tag = vacancy.find("span", attrs={"data-qa": "vacancy-serp__vacancy-employer-text"})
-                    address_tag = vacancy.find("span", attrs={"data-qa": "vacancy-serp__vacancy-address"})
+                    name = vacancy.find("span", attrs={"data-qa": "serp-item__title-text"})
+                    employer = vacancy.find("span", attrs={"data-qa": "vacancy-serp__vacancy-employer-text"})
+                    address = vacancy.find("span", attrs={"data-qa": "vacancy-serp__vacancy-address"})
                     experience = (
                             vacancylink.find("span", attrs={"data-qa": "vacancy-experience"}) or
                             vacancylink.find("p", attrs={"data-qa": "work-experience-text"})
@@ -68,19 +86,9 @@ def parse_vacancies():
                         salary = salary_tag.text if salary_tag else 'None'
                     except:
                         salary = 'None'
+                    row = [name, employer, address, experience, workinghours,workingdays,employmenttype,workformat,payfrequency,salary,infourl]
+                    vacancies_data.append(clean_vacancy(row))
 
-                    vacancies_data.append({
-                        "name": name_tag.text if name_tag else "None",
-                        "employer": employer_tag.text if employer_tag else "None",
-                        "address": address_tag.text if address_tag else "None",
-                        "salary": salary,
-                        "experience": experience.text if experience else "None",
-                        "workinghours": workinghours.text if workinghours else "None",
-                        "workingdays": workingdays.text if workingdays else "None",
-                        "employmenttype": employmenttype.text if employmenttype else "None",
-                        "workformat": workformat.text if workformat else "None",
-                        "payfrequency": payfrequency.text if payfrequency else "None",
-                    })
                     page_count += 1
                 except Exception as e:
                     # Если одна вакансия не загрузилась, просто пропускаем
